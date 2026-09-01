@@ -2,14 +2,37 @@
 
 ## Quick setup
 
-Paste this into Claude Code to clone the repo and install all three skills globally:
+Paste this into Claude Code to clone the repo, install all three skills globally, and get
+set up with API keys:
 
 ```
 Clone git@github.com:zaini/image-skills.git into a temp directory, then copy its
 skills/gpt-image, skills/gemini-image, and skills/image-compress directories into
 ~/.claude/skills/ (creating that directory if needed), overwriting if they already
 exist. Then confirm the three skill.md files are in place.
+
+I'll need an OPENAI_API_KEY (for gpt-image) and/or a GEMINI_API_KEY (for gemini-image) —
+image-compress needs no key. Ask me which provider(s) I want, tell me where to get each
+key, then help me set the one(s) I choose as environment variables (or in the fallback
+files the skills support: ~/.gpt-image.env for OpenAI, or GEMINI_API_KEY in
+~/.claude/settings.json's `env` block for Gemini).
 ```
+
+### Where to get API keys
+
+- **OpenAI (`OPENAI_API_KEY`)** — [platform.openai.com/api-keys](https://platform.openai.com/api-keys).
+  Requires an OpenAI account with billing set up; image generation is pay-per-use.
+- **Gemini (`GEMINI_API_KEY`)** — [aistudio.google.com/apikey](https://aistudio.google.com/apikey).
+  Requires a Google account; Google AI Studio issues the key, and a free tier is available
+  (rate-limited) before you need to attach billing.
+
+Once you have a key, either:
+- export it in your shell profile (`export OPENAI_API_KEY=...` / `export GEMINI_API_KEY=...`), or
+- for OpenAI, drop it in `~/.gpt-image.env` as `OPENAI_API_KEY=...` (the script falls back
+  to this file if the env var isn't set).
+
+Never commit a real key into this repo or any other — the `.gitignore` here already
+excludes `*.env`.
 
 ---
 
