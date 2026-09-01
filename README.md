@@ -1,9 +1,23 @@
 # image-skills
 
-Two Claude Code [skills](https://docs.claude.com/en/docs/claude-code/skills) for generating
-and editing images from the command line, using OpenAI's GPT Image API and Google's Gemini
-(Imagen) API. Each skill is a `skill.md` (instructions Claude reads) plus a small
-dependency-free Python script that does the actual API call.
+## Quick setup
+
+Paste this into Claude Code to clone the repo and install all three skills globally:
+
+```
+Clone git@github.com:zaini/image-skills.git into a temp directory, then copy its
+skills/gpt-image, skills/gemini-image, and skills/image-compress directories into
+~/.claude/skills/ (creating that directory if needed), overwriting if they already
+exist. Then confirm the three skill.md files are in place.
+```
+
+---
+
+Three Claude Code [skills](https://docs.claude.com/en/docs/claude-code/skills) for
+generating, editing, and compressing images from the command line — two use OpenAI's GPT
+Image API and Google's Gemini (Imagen) API to create images, the third shrinks any image's
+file size afterward. Each skill is a `skill.md` (instructions Claude reads) plus a small
+Python script that does the actual work.
 
 ```
 skills/
@@ -13,6 +27,9 @@ skills/
   gemini-image/
     skill.md
     scripts/gemini_image.py
+  image-compress/
+    skill.md
+    scripts/compress_image.py
 ```
 
 ## What each one does
@@ -24,9 +41,14 @@ skills/
   (`imagen4`, `imagen4-ultra`, `imagen4-fast`) or a Gemini image model
   (`flash`, `pro`, `flash3`). The Gemini models also accept reference images to match an
   existing style or edit an asset directly.
+- **image-compress** — shrink an image's file size by resizing and/or re-encoding it
+  (WebP, JPEG, or palette-optimized PNG) via Pillow. Useful right after generating an
+  image with either skill above, or on any existing image.
 
-Both scripts have no third-party dependencies — `gpt_image.py` uses `urllib` (and shells
-out to `curl` only for multipart image edits), `gemini_image.py` uses `urllib` alone.
+`gpt_image.py` and `gemini_image.py` have no third-party dependencies — they use `urllib`
+(`gpt_image.py` shells out to `curl` only for multipart image edits). `compress_image.py`
+is the one script with a dependency: it needs [Pillow](https://pillow.readthedocs.io/)
+(`pip install Pillow`), since real image compression needs an actual codec library.
 
 ## Installing as Claude Code skills
 
