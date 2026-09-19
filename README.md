@@ -2,20 +2,24 @@
 
 ## Quick setup
 
-Paste this into Claude Code to clone the repo, install all three skills globally, and get
+Paste this into Claude Code to clone the repo, install all four skills globally, and get
 set up with API keys:
 
 ```
 Clone git@github.com:zaini/image-skills.git into a temp directory, then copy its
-skills/gpt-image, skills/gemini-image, and skills/image-compress directories into
-~/.claude/skills/ (creating that directory if needed), overwriting if they already
-exist. Then confirm the three skill.md files are in place.
+skills/gpt-image, skills/gemini-image, skills/image-compress, and
+skills/background-remove directories into ~/.claude/skills/ (creating that directory if
+needed), overwriting if they already exist. Then confirm the four skill.md files are in
+place.
 
 I'll need an OPENAI_API_KEY (for gpt-image) and/or a GEMINI_API_KEY (for gemini-image) —
-image-compress needs no key. Ask me which provider(s) I want, tell me where to get each
-key, then help me set the one(s) I choose as environment variables (or in the fallback
-files the skills support: ~/.gpt-image.env for OpenAI, or GEMINI_API_KEY in
-~/.claude/settings.json's `env` block for Gemini).
+image-compress and background-remove need no key. Ask me which provider(s) I want, tell
+me where to get each key, then help me set the one(s) I choose as environment variables
+(or in the fallback files the skills support: ~/.gpt-image.env for OpenAI, or
+GEMINI_API_KEY in ~/.claude/settings.json's `env` block for Gemini).
+
+background-remove runs locally through `uv` (or `pip install "rembg[cpu]"` with Python
+3.11-3.13) — check that one of those is available and tell me if not.
 ```
 
 ### Where to get API keys
@@ -36,11 +40,12 @@ excludes `*.env`.
 
 ---
 
-Three Claude Code [skills](https://docs.claude.com/en/docs/claude-code/skills) for
-generating, editing, and compressing images from the command line — two use OpenAI's GPT
-Image API and Google's Gemini (Imagen) API to create images, the third shrinks any image's
-file size afterward. Each skill is a `skill.md` (instructions Claude reads) plus a small
-Python script that does the actual work.
+Four Claude Code [skills](https://docs.claude.com/en/docs/claude-code/skills) for
+generating, editing, compressing, and cutting the backgrounds out of images from the
+command line — two use OpenAI's GPT Image API and Google's Gemini (Imagen) API to create
+images, the third shrinks any image's file size afterward, and the fourth removes
+backgrounds locally with no API key. Each skill is a `skill.md` (instructions Claude
+reads) plus a small Python script that does the actual work.
 
 ```
 skills/
@@ -53,6 +58,9 @@ skills/
   image-compress/
     skill.md
     scripts/compress_image.py
+  background-remove/
+    skill.md
+    scripts/remove_background.py
 ```
 
 ## What each one does
@@ -67,11 +75,20 @@ skills/
 - **image-compress** — shrink an image's file size by resizing and/or re-encoding it
   (WebP, JPEG, or palette-optimized PNG) via Pillow. Useful right after generating an
   image with either skill above, or on any existing image.
+- **background-remove** — cut the background out of an image and get a transparent
+  PNG/WebP, a solid-colour fill, or a black/white mask. Runs fully locally with
+  [rembg](https://github.com/danielgatis/rembg) (BiRefNet and ISNet models via ONNX
+  Runtime) — no API key, no upload. The default model, `birefnet-general-lite`, is a
+  ~225 MB download on first use; `birefnet-general` and `birefnet-portrait` (~930 MB
+  each) trade size for quality, and `isnet-general-use` / `silueta` are the small, fast
+  options.
 
 `gpt_image.py` and `gemini_image.py` have no third-party dependencies — they use `urllib`
 (`gpt_image.py` shells out to `curl` only for multipart image edits). `compress_image.py`
-is the one script with a dependency: it needs [Pillow](https://pillow.readthedocs.io/)
-(`pip install Pillow`), since real image compression needs an actual codec library.
+needs [Pillow](https://pillow.readthedocs.io/) (`pip install Pillow`), since real image
+compression needs an actual codec library. `remove_background.py` needs `rembg` (Python
+3.11-3.13) — the easiest way is `uv run`, which installs it from the script's own header
+(otherwise `pip install "rembg[cpu]"`).
 
 ## Installing as Claude Code skills
 
@@ -81,6 +98,8 @@ Drop each skill directory into `~/.claude/skills/` (or your project's `.claude/s
 git clone <this-repo-url>
 cp -r image-skills/skills/gpt-image ~/.claude/skills/
 cp -r image-skills/skills/gemini-image ~/.claude/skills/
+cp -r image-skills/skills/image-compress ~/.claude/skills/
+cp -r image-skills/skills/background-remove ~/.claude/skills/
 ```
 
 Claude Code auto-discovers skills under `~/.claude/skills/<name>/skill.md`. Once installed,
@@ -90,7 +109,7 @@ set; otherwise Gemini is used).
 
 ## Running the scripts directly (no Claude Code required)
 
-Both scripts are plain Python 3, so you can call them yourself.
+The scripts are plain Python 3, so you can call them yourself.
 
 ### GPT Image
 
@@ -181,6 +200,41 @@ directly instead of describing the style from scratch in text.
 
 If `output_dir` is omitted it defaults to `screenshots/` (created if missing). The saved
 file path is printed to stdout.
+
+### Background removal
+
+No API key. Needs Python 3.11-3.13; `uv run` installs `rembg` automatically (or
+`pip install "rembg[cpu]"` and use `python3`). The first run downloads the model to
+`~/.rembg/models/` (override with `REMBG_HOME`) and can take several minutes; after that
+it's a few seconds per image.
+
+```bash
+# Transparent PNG next to the input (photo_nobg.png)
+uv run skills/background-remove/scripts/remove_background.py --input photo.jpg
+
+# White background, saved as JPEG
+uv run skills/background-remove/scripts/remove_background.py \
+  --input product.png --bgcolor white --output product-white.jpg
+
+# Batch, into another directory, with a different model
+uv run skills/background-remove/scripts/remove_background.py \
+  --input shots/*.jpg --model birefnet-portrait --output-dir cutouts/
+
+# Just the mask
+uv run skills/background-remove/scripts/remove_background.py \
+  --input photo.jpg --only-mask
+```
+
+Flags:
+
+| Flag | Values | Default |
+|---|---|---|
+| `--model` | `birefnet-general-lite`, `birefnet-general`, `birefnet-portrait`, `isnet-general-use`, `silueta` | `birefnet-general-lite` |
+| `--alpha-matting` | refine soft edges (hair, fur) | off |
+| `--bgcolor` | any colour name or hex (`white`, `'#ff8800'`); required for `.jpg` output | transparent |
+| `--only-mask` | output the black/white mask instead of the cutout | off |
+| `--output` | output path, `.png` / `.webp` / `.jpg` (single input only) | `<name>_nobg.png` next to the input |
+| `--output-dir` | directory for outputs (multiple inputs) | each input's own directory |
 
 ## Errors
 
